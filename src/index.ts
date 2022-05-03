@@ -8,6 +8,7 @@ require(`dotenv-defaults`).config({
 
 const PORT = getIntFromEnv('PORT', 9500);
 const KUBERNETES_API_BASE = process.env.KUBERNETES_API_BASE ?? 'http://localhost:8001';
+const GAME_SERVER_DOMAIN = process.env.GAME_SERVER_URL ?? 'localhost:9500';
 
 import axios from 'axios';
 import { Server, Socket } from 'socket.io';
@@ -70,6 +71,7 @@ io.on('connection', (socket) => {
         const gameServer = getGameServer();
         gameServer.then((gs) => {
           if (gs.status.state === 'Allocated') {
+            gs.status.address = GAME_SERVER_DOMAIN
             io.to(roomId).emit('game-server-found', gs);
             rooms.delete(roomId);
           } else {
