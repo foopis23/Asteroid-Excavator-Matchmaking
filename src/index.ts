@@ -1,9 +1,22 @@
+import { getIntFromEnv } from './config';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+require(`dotenv-defaults`).config({
+  path: './.env',
+  encoding: 'utf8',
+  defaults: './.env.defaults'
+})
+
+const PORT = getIntFromEnv('PORT', 9500);
+const KUBERNETES_API_BASE = process.env.KUBERNETES_API_BASE ?? 'http://localhost:8001';
+
 import axios from 'axios';
 import { Server, Socket } from 'socket.io';
 import { v4 as uuid } from 'uuid';
+import { createSecureServer } from 'http2';
+import { readFileSync } from 'fs';
 
 async function getGameServer() {
-  const response = await axios.post('http://localhost:8001/apis/allocation.agones.dev/v1/namespaces/default/gameserverallocations', {
+  const response = await axios.post(`${KUBERNETES_API_BASE}/apis/allocation.agones.dev/v1/namespaces/default/gameserverallocations`, {
     spec: {}
   })
 
@@ -14,7 +27,14 @@ async function getGameServer() {
   return response.data;
 }
 
-const io = new Server({
+const webServer = createSecureServer({
+  key: readFileSync('./cert/privkey'),
+  cert: readFileSync('./cert/cert'),
+  ca: readFileSync('./cert/chain'),
+  allowHTTP1: true
+}) as any;
+
+const io = new Server(webServer, {
   cors: {
     origin: '*',
     methods: ['GET','HEAD','PUT','PATCH','POST','DELETE']
@@ -77,4 +97,6 @@ io.on('connection', (socket) => {
   });
 });
 
-io.listen(8000);
+webServer.listen(PORT);
+console.log(`Listening on wss://localhost:${PORT}`);
+

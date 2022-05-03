@@ -2,3 +2,4 @@ node_modules/
 .env
 dist/
 asteroid-excavator-9ffeb1c828f5.json
+cert/
