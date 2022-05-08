@@ -16,7 +16,8 @@ const SSL_CERT = process.env.SSL_CERT;
 import axios from 'axios';
 import { Server, Socket } from 'socket.io';
 import { v4 as uuid } from 'uuid';
-import { createSecureServer, createServer } from 'http2';
+import { Server as HTTPServer } from 'http';
+import { Server as HTTPSServer } from 'https';
 import { readFileSync } from 'fs';
 
 async function getGameServer() {
@@ -37,12 +38,12 @@ function createWebServer(useSSL?: boolean, key?: string, cert?: string): any {
       throw new Error('SSL key or cert not provided');
     }
 
-    return createSecureServer({
+    return new HTTPSServer({
       key: readFileSync('./ssl/localhost.key'),
       cert: readFileSync('./ssl/localhost.crt')
     });
   } else {
-    return createServer();
+    return new HTTPServer();
   }
 }
 
@@ -113,5 +114,5 @@ io.on('connection', (socket) => {
 });
 
 webServer.listen(PORT);
-console.log(`Listening on wss://localhost:${PORT}`);
+console.log(`Listening on ${(USE_SSL)? 'wss': 'ws'}://localhost:${PORT}`);
 
