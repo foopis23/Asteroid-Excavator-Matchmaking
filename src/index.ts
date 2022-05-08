@@ -9,11 +9,14 @@ require(`dotenv-defaults`).config({
 const PORT = getIntFromEnv('PORT', 9500);
 const KUBERNETES_API_BASE = process.env.KUBERNETES_API_BASE ?? 'http://localhost:8001';
 const GAME_SERVER_DOMAIN = process.env.GAME_SERVER_DOMAIN ?? 'localhost:9500';
+const USE_SSL = (process.env.USE_SSL) ? process.env.USE_SSL.toLocaleLowerCase() === 'true' : false;
+const SSL_KEY = process.env.SSL_KEY;
+const SSL_CERT = process.env.SSL_CERT;
 
 import axios from 'axios';
 import { Server, Socket } from 'socket.io';
 import { v4 as uuid } from 'uuid';
-import { createSecureServer } from 'http2';
+import { createSecureServer, createServer } from 'http2';
 import { readFileSync } from 'fs';
 
 async function getGameServer() {
@@ -28,19 +31,29 @@ async function getGameServer() {
   return response.data;
 }
 
-const webServer = createSecureServer({
-  key: readFileSync('./cert/privkey'),
-  cert: readFileSync('./cert/cert'),
-  ca: readFileSync('./cert/chain'),
-  allowHTTP1: true
-}) as any;
+function createWebServer(useSSL?: boolean, key?: string, cert?: string): any {
+  if (useSSL) {
+    if (!key || !cert) {
+      throw new Error('SSL key or cert not provided');
+    }
 
+    return createSecureServer({
+      key: readFileSync('./ssl/localhost.key'),
+      cert: readFileSync('./ssl/localhost.crt')
+    });
+  } else {
+    return createServer();
+  }
+}
+
+const webServer = createWebServer(USE_SSL, SSL_KEY, SSL_CERT);
 const io = new Server(webServer, {
   cors: {
     origin: '*',
-    methods: ['GET','HEAD','PUT','PATCH','POST','DELETE']
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE']
   }
 });
+
 const rooms = new Map<string, Socket[]>();
 
 io.on('connection', (socket) => {
