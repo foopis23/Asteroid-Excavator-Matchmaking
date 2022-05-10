@@ -8,7 +8,7 @@ require(`dotenv-defaults`).config({
 
 const PORT = getIntFromEnv('PORT', 9500);
 const KUBERNETES_API_BASE = process.env.KUBERNETES_API_BASE ?? 'http://localhost:8001';
-const GAME_SERVER_DOMAIN = process.env.GAME_SERVER_DOMAIN ?? 'localhost:9500';
+const GAME_SERVER_DOMAIN = process.env.GAME_SERVER_DOMAIN;
 const USE_SSL = (process.env.USE_SSL) ? process.env.USE_SSL.toLocaleLowerCase() === 'true' : false;
 const SSL_KEY = process.env.SSL_KEY;
 const SSL_CERT = process.env.SSL_CERT;
@@ -85,7 +85,7 @@ io.on('connection', (socket) => {
         const gameServer = getGameServer();
         gameServer.then((gs) => {
           if (gs.status.state === 'Allocated') {
-            gs.status.address = GAME_SERVER_DOMAIN
+            gs.status.address = GAME_SERVER_DOMAIN ?? gs.status.address;
             io.to(roomId).emit('game-server-found', gs);
             rooms.delete(roomId);
           } else {
@@ -115,4 +115,3 @@ io.on('connection', (socket) => {
 
 webServer.listen(PORT);
 console.log(`Listening on ${(USE_SSL)? 'wss': 'ws'}://localhost:${PORT}`);
-
