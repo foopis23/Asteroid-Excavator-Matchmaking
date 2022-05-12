@@ -12,6 +12,7 @@ const GAME_SERVER_DOMAIN = process.env.GAME_SERVER_DOMAIN;
 const USE_SSL = (process.env.USE_SSL) ? process.env.USE_SSL.toLocaleLowerCase() === 'true' : false;
 const SSL_KEY = process.env.SSL_KEY;
 const SSL_CERT = process.env.SSL_CERT;
+const LOCAL_GAME_SERVER_OVERRIDE = process.env.LOCAL_GAME_SERVER_OVERRIDE;
 
 import axios from 'axios';
 import { Server, Socket } from 'socket.io';
@@ -21,6 +22,19 @@ import { Server as HTTPSServer } from 'https';
 import { readFileSync } from 'fs';
 
 async function getGameServer() {
+  if (LOCAL_GAME_SERVER_OVERRIDE) {
+    const [host, port] = LOCAL_GAME_SERVER_OVERRIDE.split(':');
+    return {
+      status: {
+        state: 'Allocated',
+        address: host,
+        ports: [
+          parseInt(port, 10)
+        ]
+      }
+    }
+  }
+
   const response = await axios.post(`${KUBERNETES_API_BASE}/apis/allocation.agones.dev/v1/namespaces/default/gameserverallocations`, {
     spec: {}
   })
@@ -114,4 +128,4 @@ io.on('connection', (socket) => {
 });
 
 webServer.listen(PORT);
-console.log(`Listening on ${(USE_SSL)? 'wss': 'ws'}://localhost:${PORT}`);
+console.log(`Listening on ${(USE_SSL) ? 'wss' : 'ws'}://localhost:${PORT}`);
